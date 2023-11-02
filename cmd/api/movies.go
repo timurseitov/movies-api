@@ -9,15 +9,12 @@ import (
 )
 
 func (app *application) createMovieHandeler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "creating a new movie")
-
 	var input struct {
 		Title   string       `json:"title"`
 		Year    int32        `json:"year"`
 		Runtime data.Runtime `json:"runtime"`
 		Genres  []string     `json:"genres"`
 	}
-
 	err := app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
@@ -30,16 +27,25 @@ func (app *application) createMovieHandeler(w http.ResponseWriter, r *http.Reque
 		Runtime: input.Runtime,
 		Genres:  input.Genres,
 	}
-
 	v := validator.New()
-
-	data.ValidateMovie(v, movie)
-	if !v.Valid() {
+	if data.ValidateMovie(v, movie); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	fmt.Fprintf(w, "%+v\n", input)
+	err = app.models.Movies.Insert(movie)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", movie.ID))
+
+	err = app.writeJSON(w, http.StatusCreated, envelope{"movie": movie}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {

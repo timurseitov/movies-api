@@ -1,6 +1,7 @@
 package main
 
 import (
+	"RESTfulAPI/internal/data"
 	"context"
 	"database/sql"
 	"flag"
@@ -29,6 +30,7 @@ type config struct {
 type application struct {
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
 func main() {
@@ -45,17 +47,18 @@ func main() {
 
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
-	app := application{
-		config: cfg,
-		logger: logger,
-	}
-
 	db, err := openDB(cfg)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
 	defer db.Close()
+
+	app := application{
+		config: cfg,
+		logger: logger,
+		models: data.NewModels(db),
+	}
 
 	logger.Printf("database connection pool established")
 
